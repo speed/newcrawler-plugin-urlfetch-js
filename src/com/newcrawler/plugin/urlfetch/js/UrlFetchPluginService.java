@@ -99,40 +99,50 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 		String proxyType=null;
 		
 		if (properties != null) {
-			if (properties.containsKey(PROPERTIES_JS_FILTER_REGEXS) && !"".equals(properties.get(PROPERTIES_JS_FILTER_REGEXS).trim())) {
+			if (properties.containsKey(PROPERTIES_JS_FILTER_REGEXS) && properties.get(PROPERTIES_JS_FILTER_REGEXS)!=null 
+					&& !"".equals(properties.get(PROPERTIES_JS_FILTER_REGEXS).trim())) {
 				jsFilterRegexs = properties.get(PROPERTIES_JS_FILTER_REGEXS).trim();
 			}
 			
-			if (properties.containsKey(PROPERTIES_JS_CACHE_REGEXS) && !"".equals(properties.get(PROPERTIES_JS_CACHE_REGEXS).trim())) {
+			if (properties.containsKey(PROPERTIES_JS_CACHE_REGEXS) && properties.get(PROPERTIES_JS_CACHE_REGEXS)!=null 
+					&& !"".equals(properties.get(PROPERTIES_JS_CACHE_REGEXS).trim())) {
 				jsCacheRegexs = properties.get(PROPERTIES_JS_CACHE_REGEXS).trim();
 			}
 
-			if (properties.containsKey(PROPERTIES_JS_FILTER_TYPE) && !"".equals(properties.get(PROPERTIES_JS_FILTER_TYPE).trim())) {
+			if (properties.containsKey(PROPERTIES_JS_FILTER_TYPE) && properties.get(PROPERTIES_JS_FILTER_TYPE)!=null 
+					&& !"".equals(properties.get(PROPERTIES_JS_FILTER_TYPE).trim())) {
 				jsFilterType = properties.get(PROPERTIES_JS_FILTER_TYPE).trim();
 			}
 			
-			if (properties.containsKey(PROPERTIES_TIMEOUT_JAVASCRIPT) && !"".equals(properties.get(PROPERTIES_TIMEOUT_JAVASCRIPT).trim())) {
+			if (properties.containsKey(PROPERTIES_TIMEOUT_JAVASCRIPT) && properties.get(PROPERTIES_TIMEOUT_JAVASCRIPT)!=null 
+					&& !"".equals(properties.get(PROPERTIES_TIMEOUT_JAVASCRIPT).trim())) {
 				timeoutJavascript = Integer.parseInt(properties.get(PROPERTIES_TIMEOUT_JAVASCRIPT).trim());
 			}
-			if (properties.containsKey(PROPERTIES_TIMEOUT_CONNECTION) && !"".equals(properties.get(PROPERTIES_TIMEOUT_CONNECTION).trim())) {
+			if (properties.containsKey(PROPERTIES_TIMEOUT_CONNECTION) && properties.get(PROPERTIES_TIMEOUT_CONNECTION)!=null 
+					&& !"".equals(properties.get(PROPERTIES_TIMEOUT_CONNECTION).trim())) {
 				timeoutConnection = Integer.parseInt(properties.get(PROPERTIES_TIMEOUT_CONNECTION).trim());
 			}
 			
-			if (properties.containsKey(PROXY_IP) && !"".equals(properties.get(PROXY_IP).trim())) {
+			if (properties.containsKey(PROXY_IP) && properties.get(PROXY_IP)!=null
+					&& !"".equals(properties.get(PROXY_IP).trim())) {
 				proxyIP = properties.get(PROXY_IP).trim();
 			}
-			if (properties.containsKey(PROXY_PORT) && !"".equals(properties.get(PROXY_PORT).trim())) {
+			if (properties.containsKey(PROXY_PORT) && properties.get(PROXY_PORT)!=null
+					&& !"".equals(properties.get(PROXY_PORT).trim())) {
 				proxyPort = Integer.parseInt(properties.get(PROXY_PORT).trim());
 			}
 
-			if (properties.containsKey(PROXY_USER) && !"".equals(properties.get(PROXY_USER).trim())) {
+			if (properties.containsKey(PROXY_USER) && properties.get(PROXY_USER)!=null
+					&& !"".equals(properties.get(PROXY_USER).trim())) {
 				proxyUsername = properties.get(PROXY_USER).trim();
 			}
 			
-			if (properties.containsKey(PROXY_PASS) && !"".equals(properties.get(PROXY_PASS).trim())) {
+			if (properties.containsKey(PROXY_PASS) && properties.get(PROXY_PASS)!=null
+					&& !"".equals(properties.get(PROXY_PASS).trim())) {
 				proxyPassword = properties.get(PROXY_PASS).trim();
 			}
-			if (properties.containsKey(PROXY_TYPE) && !"".equals(properties.get(PROXY_TYPE).trim())) {
+			if (properties.containsKey(PROXY_TYPE) && properties.get(PROXY_TYPE)!=null
+					&& !"".equals(properties.get(PROXY_TYPE).trim())) {
 				proxyType = properties.get(PROXY_TYPE).trim();
 			}
 		}
