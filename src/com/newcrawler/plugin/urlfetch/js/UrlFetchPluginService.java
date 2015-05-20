@@ -200,6 +200,7 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 		map.put(RETURN_DATA_KEY_INCLUDE_JS, jsList);
 		map.put(RETURN_DATA_KEY_COOKIES, urlFetchResponse.getCookies());
 		map.put(RETURN_DATA_KEY_EXCEPTION_URL, exceptionURL);
+		map.put(RETURN_DATA_KEY_ENCODING, urlFetchResponse.getEncoding());
 		return map;
 	}
 
@@ -220,7 +221,7 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 			page = webClient.getPage(request);
 			pageAsText = getPageContent(page);
 			realURL = page.getUrl().toString();
-			
+			encoding=page.getWebResponse().getContentCharset();
 			CookieManager cookieManager =webClient.getCookieManager();
 			Set<Cookie> cookieSet = cookieManager.getCookies();
 			for (Cookie cookie : cookieSet) {
@@ -247,6 +248,7 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 		urlFetchResponse.setContent(pageAsText);
 		urlFetchResponse.setRealURL(realURL);
 		urlFetchResponse.setCookies(cookies);
+		urlFetchResponse.setEncoding(encoding);
 		return urlFetchResponse;
 	}
 	private WebConnection createWebConnection(WebClientWithFilter webClient) {
@@ -391,6 +393,7 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 		private String realURL;
 		private String content;
 		private Map<String, String> cookies;
+		private String encoding;
 		
 		public String getRealURL() {
 			return realURL;
@@ -414,6 +417,14 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 
 		public void setCookies(Map<String, String> cookies) {
 			this.cookies = cookies;
+		}
+
+		public String getEncoding() {
+			return encoding;
+		}
+
+		public void setEncoding(String encoding) {
+			this.encoding = encoding;
 		}
 	}
 
