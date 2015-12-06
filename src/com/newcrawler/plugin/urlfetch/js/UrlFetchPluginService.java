@@ -22,6 +22,7 @@ import com.gargoylesoftware.htmlunit.Cache;
 import com.gargoylesoftware.htmlunit.CookieManager;
 import com.gargoylesoftware.htmlunit.DefaultCredentialsProvider;
 import com.gargoylesoftware.htmlunit.IncorrectnessListener;
+import com.gargoylesoftware.htmlunit.InteractivePage;
 import com.gargoylesoftware.htmlunit.Page;
 import com.gargoylesoftware.htmlunit.ProxyConfig;
 import com.gargoylesoftware.htmlunit.ScriptException;
@@ -37,6 +38,7 @@ import com.gargoylesoftware.htmlunit.javascript.JavaScriptEngine;
 import com.gargoylesoftware.htmlunit.javascript.JavaScriptErrorListener;
 import com.gargoylesoftware.htmlunit.util.Cookie;
 import com.soso.plugin.UrlFetchPlugin;
+import com.soso.plugin.bo.UrlFetchPluginBo;
 
 public class UrlFetchPluginService implements UrlFetchPlugin {
 	private static Log logger=LogFactory.getLog(UrlFetchPluginService.class);
@@ -47,45 +49,57 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 	public static final String PROPERTIES_JS_FILTER_TYPE = "js.filter.type";
 	public static final String PROPERTIES_JS_CACHE_REGEXS = "js.cache.regexs";
 	
+	private static final String DEFAULT_JS_FILTER_TYPE = "include";
+	
 	public static final String PROXY_IP = "proxy.ip";
 	public static final String PROXY_PORT = "proxy.port";
 	public static final String PROXY_USER = "proxy.username";
 	public static final String PROXY_PASS = "proxy.password";
 	public static final String PROXY_TYPE = "proxy.type";
 	
-	private static final String DEFAULT_JS_FILTER_TYPE = "include";
-	private Cache _cache;
-
 	public static void main(String[] args) throws IOException{
 		Map<String, String> properties=new HashMap<String, String>(); 
 		properties.put(PROXY_IP, "127.0.0.1");
-		properties.put(PROXY_PORT, String.valueOf(6666));
-		properties.put(PROXY_TYPE, "socks5");
+		properties.put(PROXY_PORT, String.valueOf(8888));
+		properties.put(PROXY_TYPE, "http");
+		
+		properties.put(PROPERTIES_JS_FILTER_TYPE, "include");
+		properties.put(PROPERTIES_JS_FILTER_REGEXS, "http://static.360buyimg.com/*|$|http://item.jd.com/*");
+		
+		
 		
 		Map<String, String> headers=new HashMap<String, String>(); 
-		String crawlUrl="http://item.jd.com/832705.html"; 
+		String crawlUrl="http://item.jd.com/1510479.html"; 
 		String method=null; 
-		String cookie=null; 
+		String cookie=""; 
 		String userAgent="Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.7 (KHTML, like Gecko) Chrome/16.0.912.36 Safari/535.7"; 
 		String encoding="GB2312";
 		UrlFetchPluginService urlFetchPluginService=new UrlFetchPluginService();
-		//urlFetchPluginService.execute(properties, crawlUrl, method, cookie, userAgent, encoding);
+		UrlFetchPluginBo urlFetchPluginBo=new UrlFetchPluginBo(properties, headers, crawlUrl, method, cookie, userAgent, encoding);
 		
-		crawlUrl="http://www.newcrawler.com/header"; 
-		Map<String, Object> map =urlFetchPluginService.execute(properties, headers, crawlUrl, method, cookie, userAgent, encoding);
+		Map<String, Object> map =urlFetchPluginService.execute(urlFetchPluginBo);
 		System.out.println(map.get(RETURN_DATA_KEY_CONTENT));
 		
-		crawlUrl="http://www.google.com"; 
-		map =urlFetchPluginService.execute(properties, headers, crawlUrl, method, cookie, userAgent, encoding);
+		crawlUrl="http://www.newcrawler.com/header"; 
+		urlFetchPluginBo=new UrlFetchPluginBo(properties, headers, crawlUrl, method, cookie, userAgent, encoding);
+		map =urlFetchPluginService.execute(urlFetchPluginBo);
 		System.out.println(map.get(RETURN_DATA_KEY_CONTENT));
 	}
 	
-	public UrlFetchPluginService() {
-		_cache = CacheFactory.getInstance().getCache();
+	public UrlFetchPluginService(){
+		
 	}
-
+	
 	@Override
-	public Map<String, Object> execute(Map<String, String> properties, Map<String, String> headers, String urlString, String method, String cookie, String userAgent, String encoding) throws IOException {
+	public Map<String, Object> execute(UrlFetchPluginBo urlFetchPluginBo) throws IOException {
+		Map<String, String> properties=urlFetchPluginBo.getProperties();
+		Map<String, String> headers=urlFetchPluginBo.getHeaders();
+		String urlString=urlFetchPluginBo.getCrawlUrl();
+		String method=urlFetchPluginBo.getMethod();
+		String cookie=urlFetchPluginBo.getCookie();
+		String userAgent=urlFetchPluginBo.getUserAgent();
+		String encoding=urlFetchPluginBo.getEncoding();
+		
 		String jsFilterRegexs = null;
 		String jsFilterType = DEFAULT_JS_FILTER_TYPE;
 		String jsCacheRegexs = null;
@@ -147,11 +161,10 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 			}
 		}
 
-		String[] filterRegexs = null;
+		String filterRegexs = null;
 		if (jsFilterRegexs != null && !"".equals(jsFilterRegexs.trim())) {
 			String[] regexs = jsFilterRegexs.split("\\Q|$|\\E");
 			int len = regexs.length;
-			filterRegexs = new String[len];
 			for (int i = 0; i < len; i++) {
 				String regex = regexs[i];
 				regex = regex.trim();
@@ -159,14 +172,17 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 				if(regex.indexOf("*")!=-1){
 					regex = regex.replaceAll("\\*", "\\\\E.*\\\\Q");
 				}
-				filterRegexs[i] = regex;
+				if(filterRegexs==null){
+					filterRegexs=regex;
+				}else{
+					filterRegexs=filterRegexs+"|"+regex;
+				}
 			}
 		}
-		String[] cacheRegexs = null;
+		String cacheRegexs = null;
 		if (jsCacheRegexs != null && !"".equals(jsCacheRegexs.trim())) {
 			String[] regexs = jsCacheRegexs.split("\\Q|$|\\E");
 			int len = regexs.length;
-			cacheRegexs = new String[len];
 			for (int i = 0; i < len; i++) {
 				String regex = regexs[i];
 				regex = regex.trim();
@@ -174,7 +190,11 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 				if(regex.indexOf("*")!=-1){
 					regex = regex.replaceAll("\\*", "\\\\E.*\\\\Q");
 				}
-				cacheRegexs[i] = regex;
+				if(cacheRegexs==null){
+					cacheRegexs=regex;
+				}else{
+					cacheRegexs=cacheRegexs+"|"+regex;
+				}
 			}
 		}
 		if(headers==null){
@@ -204,8 +224,8 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 		return map;
 	}
 
-	private UrlFetchResponse readHtml(String proxyIP, int proxyPort, final String proxyUsername, final String proxyPassword, final String proxyType, String urlString, String encoding, final Map<String, String> headers, String jsFilterType, 
-			String[] jsFilterRegexs, List<String> jsList, String[] jsCacheRegexs,
+	private UrlFetchResponse readHtml(String proxyIP, int proxyPort, final String proxyUsername, final String proxyPassword, final String proxyType, String urlString, String encoding, final Map<String, String> headers, 
+			String jsFilterType, String jsFilterRegexs, List<String> jsList, String jsCacheRegexs,
 			int timeoutConnection, int timeoutJavascript, List<String> exceptionURL) throws IOException {
 		WebRequest request = new WebRequest(new URL(urlString));
 		request.setCharset(encoding);
@@ -259,9 +279,11 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
         return new NoRetryHttpWebConnection(webClient);
     }
 	
-	public WebClientWithFilter getWebClient(String proxyIP, int proxyPort, final String proxyUsername, final String proxyPassword, final String proxyType, String urlString, String jsFilterType, String[] jsFilterRegexs, List<String> jsList, String[] jsCacheRegexs,
+	public WebClientWithFilter getWebClient(String proxyIP, int proxyPort, final String proxyUsername, final String proxyPassword, final String proxyType, String urlString, 
+			String jsFilterType, String jsFilterRegexs, List<String> jsList, String jsCacheRegexs,
 			int timeoutConnection, int timeoutJavascript, List<String> exceptionURL) {
 		java.util.logging.Logger.getLogger("com.gargoylesoftware").setLevel(Level.OFF);
+		Cache _cache = CacheFactory.getInstance().getCache();
 		
 		WebClientWithFilter webClient = new WebClientWithFilter(urlString, BrowserVersion.INTERNET_EXPLORER_11, jsFilterType, jsFilterRegexs, jsList, jsCacheRegexs, exceptionURL);
 		webClient.getOptions().setCssEnabled(false);
@@ -313,22 +335,31 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 			}
 		});
 		webClient.setJavaScriptErrorListener(new JavaScriptErrorListener() {
+
 			@Override
-			public void timeoutError(HtmlPage arg0, long arg1, long arg2) {
+			public void loadScriptError(InteractivePage arg0, URL arg1, Exception arg2) {
 				// TODO Auto-generated method stub
+				
 			}
+
 			@Override
-			public void scriptException(HtmlPage arg0, ScriptException arg1) {
+			public void malformedScriptURL(InteractivePage arg0, String arg1, MalformedURLException arg2) {
 				// TODO Auto-generated method stub
+				
 			}
+
 			@Override
-			public void malformedScriptURL(HtmlPage arg0, String arg1, MalformedURLException arg2) {
+			public void scriptException(InteractivePage arg0, ScriptException arg1) {
 				// TODO Auto-generated method stub
+				
 			}
+
 			@Override
-			public void loadScriptError(HtmlPage arg0, URL arg1, Exception arg2) {
+			public void timeoutError(InteractivePage arg0, long arg1, long arg2) {
 				// TODO Auto-generated method stub
+				
 			}
+			
 		});
 		webClient.setHTMLParserListener(new HTMLParserListener() {
 			@Override
@@ -357,7 +388,7 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 							HtmlPage htmlPage = (HtmlPage) page;
 							htmlPage.remove();
 						}
-						window.getEnclosedPage().getEnclosingWindow().setScriptObject(null);
+						window.getEnclosedPage().getEnclosingWindow().setScriptableObject(null);
 					}
 					webClient.deregisterWebWindow(window);
 				} catch (Exception e) {
@@ -365,8 +396,8 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 				}
 			}
 		}
-		webClient.getJavaScriptEngine().getWebClient().closeAllWindows();
-		webClient.closeAllWindows();
+		webClient.getJavaScriptEngine().getWebClient().close();
+		webClient.close();
 	}
 
 	private String getPageContent(Page page) {
@@ -430,6 +461,6 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 
 	@Override
 	public void destory() {
-		_cache.clear();
+		CacheFactory.getInstance().getCache().clear();
 	}
 }

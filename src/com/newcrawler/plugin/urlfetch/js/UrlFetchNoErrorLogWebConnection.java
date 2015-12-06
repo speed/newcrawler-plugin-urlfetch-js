@@ -208,4 +208,9 @@ public class UrlFetchNoErrorLogWebConnection implements WebConnection{
         }
         return cookies;
     }
+
+	@Override
+	public void close() throws Exception {
+		webClient_.close();
+	}
 }
