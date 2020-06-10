@@ -83,7 +83,7 @@ public class UrlFetchNoErrorLogWebConnection implements WebConnection{
             connection.setRequestMethod(httpMethod.name());
             if (HttpMethod.POST == httpMethod || HttpMethod.PUT == httpMethod) {
                 connection.setDoOutput(true);
-                final String charset = webRequest.getCharset();
+                final String charset = webRequest.getCharset().name();
                 connection.addRequestProperty("Content-Type", "application/x-www-form-urlencoded");
                 final OutputStream outputStream = connection.getOutputStream();
                 try {

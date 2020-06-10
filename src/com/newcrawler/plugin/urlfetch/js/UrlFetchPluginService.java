@@ -3,7 +3,9 @@ package com.newcrawler.plugin.urlfetch.js;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +24,6 @@ import com.gargoylesoftware.htmlunit.Cache;
 import com.gargoylesoftware.htmlunit.CookieManager;
 import com.gargoylesoftware.htmlunit.DefaultCredentialsProvider;
 import com.gargoylesoftware.htmlunit.IncorrectnessListener;
-import com.gargoylesoftware.htmlunit.InteractivePage;
 import com.gargoylesoftware.htmlunit.Page;
 import com.gargoylesoftware.htmlunit.ProxyConfig;
 import com.gargoylesoftware.htmlunit.ScriptException;
@@ -38,6 +39,7 @@ import com.gargoylesoftware.htmlunit.javascript.JavaScriptEngine;
 import com.gargoylesoftware.htmlunit.javascript.JavaScriptErrorListener;
 import com.gargoylesoftware.htmlunit.util.Cookie;
 import com.soso.plugin.UrlFetchPlugin;
+import com.soso.plugin.bo.HttpCookieBo;
 import com.soso.plugin.bo.UrlFetchPluginBo;
 
 public class UrlFetchPluginService implements UrlFetchPlugin {
@@ -57,37 +59,10 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 	public static final String PROXY_PASS = "proxy.password";
 	public static final String PROXY_TYPE = "proxy.type";
 	
-	public static void main(String[] args) throws IOException{
-		Map<String, String> properties=new HashMap<String, String>(); 
-		properties.put(PROXY_IP, "127.0.0.1");
-		properties.put(PROXY_PORT, String.valueOf(8888));
-		properties.put(PROXY_TYPE, "http");
-		
-		properties.put(PROPERTIES_JS_FILTER_TYPE, "include");
-		properties.put(PROPERTIES_JS_FILTER_REGEXS, "http://static.360buyimg.com/*|$|http://item.jd.com/*");
-		
-		
-		
-		Map<String, String> headers=new HashMap<String, String>(); 
-		String crawlUrl="http://item.jd.com/1510479.html"; 
-		String method=null; 
-		String cookie=""; 
-		String userAgent="Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.7 (KHTML, like Gecko) Chrome/16.0.912.36 Safari/535.7"; 
-		String encoding="GB2312";
-		UrlFetchPluginService urlFetchPluginService=new UrlFetchPluginService();
-		UrlFetchPluginBo urlFetchPluginBo=new UrlFetchPluginBo(properties, headers, crawlUrl, method, cookie, userAgent, encoding);
-		
-		Map<String, Object> map =urlFetchPluginService.execute(urlFetchPluginBo);
-		System.out.println(map.get(RETURN_DATA_KEY_CONTENT));
-		
-		crawlUrl="http://www.newcrawler.com/header"; 
-		urlFetchPluginBo=new UrlFetchPluginBo(properties, headers, crawlUrl, method, cookie, userAgent, encoding);
-		map =urlFetchPluginService.execute(urlFetchPluginBo);
-		System.out.println(map.get(RETURN_DATA_KEY_CONTENT));
-	}
+	
 	
 	public UrlFetchPluginService(){
-		
+		logger.info("UrlFetchPluginService() newInstance.");
 	}
 	
 	@Override
@@ -96,7 +71,7 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 		Map<String, String> headers=urlFetchPluginBo.getHeaders();
 		String urlString=urlFetchPluginBo.getCrawlUrl();
 		String method=urlFetchPluginBo.getMethod();
-		String cookie=urlFetchPluginBo.getCookie();
+		List<HttpCookieBo> cookieList=urlFetchPluginBo.getCookieList();
 		String userAgent=urlFetchPluginBo.getUserAgent();
 		String encoding=urlFetchPluginBo.getEncoding();
 		
@@ -200,9 +175,13 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 		if(headers==null){
 			headers = new HashMap<String, String>();
 		}
-		if(StringUtils.isNoneBlank(cookie)){
-			headers.put("Cookie", cookie);
+		if(cookieList!=null && !cookieList.isEmpty()){
+			String cookie=getCookies(cookieList);
+			if(StringUtils.isNoneBlank(cookie)){
+				headers.put("Cookie", cookie);
+			}
 		}
+		
 		if(StringUtils.isNoneBlank(userAgent)){
 			headers.put("User-Agent", userAgent);
 		}
@@ -218,17 +197,24 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 		map.put(RETURN_DATA_KEY_CONTENT, urlFetchResponse.getContent());
 		map.put(RETURN_DATA_KEY_REALURL, urlFetchResponse.getRealURL());
 		map.put(RETURN_DATA_KEY_INCLUDE_JS, jsList);
-		map.put(RETURN_DATA_KEY_COOKIES, urlFetchResponse.getCookies());
+		map.put(RETURN_DATA_KEY_COOKIES, urlFetchResponse.getCookieList());
 		map.put(RETURN_DATA_KEY_EXCEPTION_URL, exceptionURL);
 		map.put(RETURN_DATA_KEY_ENCODING, urlFetchResponse.getEncoding());
 		return map;
 	}
 
+	private final String getCookies(List<HttpCookieBo> cookieList){
+		String cookie="";
+		for(HttpCookieBo httpCookie:cookieList){
+			cookie+=httpCookie.getName()+"="+httpCookie.getValue()+";";
+		}
+		return cookie;
+	}
 	private UrlFetchResponse readHtml(String proxyIP, int proxyPort, final String proxyUsername, final String proxyPassword, final String proxyType, String urlString, String encoding, final Map<String, String> headers, 
 			String jsFilterType, String jsFilterRegexs, List<String> jsList, String jsCacheRegexs,
 			int timeoutConnection, int timeoutJavascript, List<String> exceptionURL) throws IOException {
 		WebRequest request = new WebRequest(new URL(urlString));
-		request.setCharset(encoding);
+		request.setCharset(Charset.forName(encoding));
 		request.setAdditionalHeaders(headers);
 
 		WebClientWithFilter webClient = getWebClient(proxyIP, proxyPort, proxyUsername, proxyPassword, proxyType, urlString, jsFilterType, jsFilterRegexs, jsList, jsCacheRegexs,
@@ -236,16 +222,32 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 		Page page = null;
 		String pageAsText = null;
 		String realURL = urlString;
-		Map<String, String> cookies=new HashMap<String, String>();;
+		List<HttpCookieBo> cookieList=new ArrayList<HttpCookieBo>();
 		try {
 			page = webClient.getPage(request);
 			pageAsText = getPageContent(page);
 			realURL = page.getUrl().toString();
-			encoding=page.getWebResponse().getContentCharset();
+			encoding=page.getWebResponse().getContentCharset().name();
+			
 			CookieManager cookieManager =webClient.getCookieManager();
 			Set<Cookie> cookieSet = cookieManager.getCookies();
+			Date nowDate=new Date();
+			long nowTime=nowDate.getTime();
 			for (Cookie cookie : cookieSet) {
-				cookies.put(cookie.getName(), cookie.getValue());
+				HttpCookieBo httpCookie=new HttpCookieBo(cookie.getName(), cookie.getValue());
+				httpCookie.setDomain(cookie.getDomain());
+				httpCookie.setPath(cookie.getPath());
+				httpCookie.setSecure(cookie.isSecure());
+				httpCookie.setHttpOnly(cookie.isHttpOnly());
+				
+				long expiry=-1;
+				Date expiryDate=cookie.getExpires();
+				if(expiryDate!=null){
+					expiry=cookie.getExpires().getTime()-nowTime;
+					expiry=expiry/1000;
+				}
+				httpCookie.setMaxAge(expiry);//
+				cookieList.add(httpCookie);
 			}
 		} catch (StackOverflowError overflowError) {
 			pageAsText = overflowError.getMessage();
@@ -267,7 +269,7 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 		UrlFetchResponse urlFetchResponse = new UrlFetchResponse();
 		urlFetchResponse.setContent(pageAsText);
 		urlFetchResponse.setRealURL(realURL);
-		urlFetchResponse.setCookies(cookies);
+		urlFetchResponse.setCookieList(cookieList);
 		urlFetchResponse.setEncoding(encoding);
 		return urlFetchResponse;
 	}
@@ -285,7 +287,7 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 		java.util.logging.Logger.getLogger("com.gargoylesoftware").setLevel(Level.OFF);
 		Cache _cache = CacheFactory.getInstance().getCache();
 		
-		WebClientWithFilter webClient = new WebClientWithFilter(urlString, BrowserVersion.INTERNET_EXPLORER_11, jsFilterType, jsFilterRegexs, jsList, jsCacheRegexs, exceptionURL);
+		WebClientWithFilter webClient = new WebClientWithFilter(urlString, BrowserVersion.CHROME, jsFilterType, jsFilterRegexs, jsList, jsCacheRegexs, exceptionURL);
 		webClient.getOptions().setCssEnabled(false);
 		webClient.getOptions().setAppletEnabled(false);
 		webClient.getOptions().setJavaScriptEnabled(true);
@@ -313,7 +315,7 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 			}
 		}
 		
-		webClient.setWebConnection(createWebConnection(webClient));
+		//webClient.setWebConnection(createWebConnection(webClient));
 		webClient.setIncorrectnessListener(new IncorrectnessListener() {
 			@Override
 			public void notify(String arg0, Object arg1) {
@@ -337,28 +339,29 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 		webClient.setJavaScriptErrorListener(new JavaScriptErrorListener() {
 
 			@Override
-			public void loadScriptError(InteractivePage arg0, URL arg1, Exception arg2) {
+			public void loadScriptError(HtmlPage arg0, URL arg1, Exception arg2) {
 				// TODO Auto-generated method stub
 				
 			}
 
 			@Override
-			public void malformedScriptURL(InteractivePage arg0, String arg1, MalformedURLException arg2) {
+			public void malformedScriptURL(HtmlPage arg0, String arg1, MalformedURLException arg2) {
 				// TODO Auto-generated method stub
 				
 			}
 
 			@Override
-			public void scriptException(InteractivePage arg0, ScriptException arg1) {
+			public void scriptException(HtmlPage arg0, ScriptException arg1) {
 				// TODO Auto-generated method stub
 				
 			}
 
 			@Override
-			public void timeoutError(InteractivePage arg0, long arg1, long arg2) {
+			public void timeoutError(HtmlPage arg0, long arg1, long arg2) {
 				// TODO Auto-generated method stub
 				
 			}
+
 			
 		});
 		webClient.setHTMLParserListener(new HTMLParserListener() {
@@ -396,7 +399,6 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 				}
 			}
 		}
-		webClient.getJavaScriptEngine().getWebClient().close();
 		webClient.close();
 	}
 
@@ -423,7 +425,7 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 	final class UrlFetchResponse {
 		private String realURL;
 		private String content;
-		private Map<String, String> cookies;
+		private List<HttpCookieBo> cookieList;
 		private String encoding;
 		
 		public String getRealURL() {
@@ -442,14 +444,6 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 			this.content = content;
 		}
 
-		public Map<String, String> getCookies() {
-			return cookies;
-		}
-
-		public void setCookies(Map<String, String> cookies) {
-			this.cookies = cookies;
-		}
-
 		public String getEncoding() {
 			return encoding;
 		}
@@ -457,6 +451,15 @@ public class UrlFetchPluginService implements UrlFetchPlugin {
 		public void setEncoding(String encoding) {
 			this.encoding = encoding;
 		}
+
+		public List<HttpCookieBo> getCookieList() {
+			return cookieList;
+		}
+
+		public void setCookieList(List<HttpCookieBo> cookieList) {
+			this.cookieList = cookieList;
+		}
+
 	}
 
 	@Override
